@@ -2,117 +2,91 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "LogicAppIntegrationAccount": {
-      "type": "string",
-      "minLength": 1,
-      "defaultValue": "/subscriptions/310e4856-88aa-42fe-89e6-b964f7797bf9/resourceGroups/myfirstlogicapp/providers/Microsoft.Logic/integrationAccounts/Peeyushpay"
+    "workflows_PayAggreggration_name": {
+      "defaultValue": "PayAggreggration",
+      "type": "String"
     },
-    "servicebus_1_Connection_Name": {
-      "type": "string",
-      "defaultValue": "servicebus-2"
+    "integrationAccounts_Peeyush_externalid": {
+      "defaultValue": "/subscriptions/43e592b2-05f6-4577-8826-391e3a0cdaac/resourceGroups/peeyush/providers/Microsoft.Logic/integrationAccounts/Peeyush",
+      "type": "String"
     },
-    "servicebus_1_Connection_DisplayName": {
-      "type": "string",
-      "defaultValue": "pay"
-    },
-    "servicebus_1_connectionString": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Azure Service Bus Connection String"
-      }
-    },
-    "LogicAppLocation": {
-      "type": "string",
-      "minLength": 1,
-      "allowedValues": [
-        "[resourceGroup().location]",
-        "eastasia",
-        "southeastasia",
-        "centralus",
-        "eastus",
-        "eastus2",
-        "westus",
-        "northcentralus",
-        "southcentralus",
-        "northeurope",
-        "westeurope",
-        "japanwest",
-        "japaneast",
-        "brazilsouth",
-        "australiaeast",
-        "australiasoutheast",
-        "southindia",
-        "centralindia",
-        "westindia",
-        "canadacentral",
-        "canadaeast",
-        "uksouth",
-        "ukwest",
-        "westcentralus",
-        "westus2",
-        "koreacentral",
-        "koreasouth",
-        "francecentral",
-        "francesouth",
-        "southafricanorth",
-        "southafricawest"
-      ],
-      "defaultValue": "southindia"
-    },
-    "LogicAppName": {
-      "type": "string",
-      "minLength": 1,
-      "defaultValue": "PeeyushPaySample"
+    "connections_servicebus_externalid": {
+      "defaultValue": "/subscriptions/43e592b2-05f6-4577-8826-391e3a0cdaac/resourceGroups/peeyush/providers/Microsoft.Web/connections/servicebus",
+      "type": "String"
     }
   },
   "variables": {},
   "resources": [
     {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2017-07-01",
+      "name": "[parameters('workflows_PayAggreggration_name')]",
+      "location": "southindia",
       "properties": {
         "state": "Enabled",
         "integrationAccount": {
-          "id": "[parameters('LogicAppIntegrationAccount')]"
+          "id": "[parameters('integrationAccounts_Peeyush_externalid')]"
         },
         "definition": {
           "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
+          "triggers": {
+            "manual": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {}
+              }
+            }
+          },
           "actions": {
             "Compose": {
-              "type": "Compose",
-              "inputs": "@body('Flat_File_Decoding')",
               "runAfter": {
                 "Flat_File_Decoding": [
                   "Succeeded"
                 ]
-              }
+              },
+              "type": "Compose",
+              "inputs": "@body('Flat_File_Decoding')"
             },
             "Flat_File_Decoding": {
+              "runAfter": {},
               "type": "FlatFileDecoding",
               "inputs": {
                 "content": "@{triggerBody()}",
                 "integrationAccount": {
                   "schema": {
-                    "name": "PeeyushNewSchema"
+                    "name": "ppppay"
                   }
                 }
-              },
-              "runAfter": {}
+              }
             },
             "For_each": {
-              "type": "Foreach",
               "foreach": "@xpath(xml(body('Flat_File_Decoding')),'//*[local-name()=\"Employee\"]')",
               "actions": {
                 "Execute_JavaScript_Code": {
-                  "type": "JavaScriptCode",
-                  "inputs": {
-                    "code": "var year=parseInt(workflowContext.actions.Parse_JSON.outputs.body.PeriodEndYear);\r\nvar month=parseInt(workflowContext.actions.Parse_JSON.outputs.body.PeriodEndMonth);\r\nvar day=parseInt(workflowContext.actions.Parse_JSON.outputs.body.PeriodEndWeek);\r\nvar out=week (year,month,day);\r\nfunction week(year,month,day){\r\n     function serial(days) { return 86400000*days; }\r\n     function dateserial(year,month,day) {return (new Date(year,month-1,day).valueOf()); }\r\n     function weekday(date) { return (new Date(date)).getDay()+1; }\r\n     function yearserial(date){return (new Date(date)).getFullYear(); }\r\n     var date = year instanceof Date ? year.valueOf() : typeof year === \"string\"? new Date(year).valueOf() : dateserial(year,month,day),\r\n     date2 = dateserial(yearserial(date - serial(weekday(date-serial(1))) + serial(4)),1,3);\r\n     return ~~((date - date2 + serial(weekday(date2) + 5))/ serial(7));\r\n        }\r\n        return out;"
-                  },
                   "runAfter": {
                     "Parse_JSON": [
                       "Succeeded"
                     ]
+                  },
+                  "type": "JavaScriptCode",
+                  "inputs": {
+                    "code": "var year=parseInt(workflowContext.actions.Parse_JSON.outputs.body.PeriodEndYear);\r\nvar month=parseInt(workflowContext.actions.Parse_JSON.outputs.body.PeriodEndMonth);\r\nvar day=parseInt(workflowContext.actions.Parse_JSON.outputs.body.PeriodEndWeek);\r\nvar out=week (year,month,day);\r\nfunction week(year,month,day){\r\n     function serial(days) { return 86400000*days; }\r\n     function dateserial(year,month,day) {return (new Date(year,month-1,day).valueOf()); }\r\n     function weekday(date) { return (new Date(date)).getDay()+1; }\r\n     function yearserial(date){return (new Date(date)).getFullYear(); }\r\n     var date = year instanceof Date ? year.valueOf() : typeof year === \"string\"? new Date(year).valueOf() : dateserial(year,month,day),\r\n     date2 = dateserial(yearserial(date - serial(weekday(date-serial(1))) + serial(4)),1,3);\r\n     return ~~((date - date2 + serial(weekday(date2) + 5))/ serial(7));\r\n        }\r\n        return out;"
                   }
                 },
                 "Parse_JSON": {
+                  "runAfter": {
+                    "Transform_XML_to_JSON": [
+                      "Succeeded"
+                    ]
+                  },
                   "type": "ParseJson",
                   "inputs": {
                     "content": "@body('Transform_XML_to_JSON')",
@@ -181,115 +155,68 @@
                       },
                       "type": "object"
                     }
-                  },
-                  "runAfter": {
-                    "Transform_XML_to_JSON": [
-                      "Succeeded"
-                    ]
                   }
                 },
                 "Send_message": {
-                  "type": "ApiConnection",
-                  "inputs": {
-                    "host": {
-                      "connection": {
-                        "name": "@parameters('$connections')['servicebus_1']['connectionId']"
-                      }
-                    },
-                    "method": "post",
-                    "body": {
-                      "ContentData": "@{base64(body('Parse_JSON'))}",
-                      "Properties": {
-                        "Country": "@body('Parse_JSON')?['Country']"
-                      },
-                      "MessageId": "@body('Parse_JSON')?['EmployeeID']"
-                    },
-                    "path": "/@{encodeURIComponent(encodeURIComponent('pay'))}/messages"
-                  },
                   "runAfter": {
                     "Execute_JavaScript_Code": [
                       "Succeeded"
                     ]
+                  },
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "body": {
+                      "ContentData": "@{base64(body('Parse_JSON'))}",
+                      "Properties": {
+                        "Country": " @{body('Parse_JSON')?['Country']}"
+                      },
+                      "SessionId": "@body('Parse_JSON')?['EmployeeID']"
+                    },
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['servicebus']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "path": "/@{encodeURIComponent(encodeURIComponent('abc'))}/messages"
                   }
                 },
                 "Transform_XML_to_JSON": {
+                  "runAfter": {},
+                  "type": "Liquid",
+                  "kind": "XmlToJson",
                   "inputs": {
                     "content": "@{items('For_each')}",
                     "integrationAccount": {
                       "map": {
-                        "name": "new19"
+                        "name": "ppppay"
                       }
                     }
-                  },
-                  "type": "Liquid",
-                  "kind": "XmlToJson",
-                  "runAfter": {}
+                  }
                 }
               },
               "runAfter": {
                 "Compose": [
                   "Succeeded"
                 ]
-              }
+              },
+              "type": "Foreach"
             }
           },
-          "parameters": {
-            "$connections": {
-              "defaultValue": {},
-              "type": "Object"
-            }
-          },
-          "triggers": {
-            "manual": {
-              "type": "Request",
-              "kind": "Http",
-              "inputs": {
-                "schema": {}
-              }
-            }
-          },
-          "contentVersion": "1.0.0.0",
           "outputs": {}
         },
         "parameters": {
           "$connections": {
             "value": {
-              "servicebus_1": {
-                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', 'southindia', '/managedApis/', 'servicebus')]",
-                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('servicebus_1_Connection_Name'))]",
-                "connectionName": "[parameters('servicebus_1_Connection_Name')]"
+              "servicebus": {
+                "connectionId": "[parameters('connections_servicebus_externalid')]",
+                "connectionName": "servicebus",
+                "id": "/subscriptions/43e592b2-05f6-4577-8826-391e3a0cdaac/providers/Microsoft.Web/locations/southindia/managedApis/servicebus"
               }
             }
           }
-        },
-        "accessControl": {}
-      },
-      "name": "[parameters('LogicAppName')]",
-      "type": "Microsoft.Logic/workflows",
-      "location": "[parameters('LogicAppLocation')]",
-      "tags": {
-        "displayName": "LogicApp"
-      },
-      "apiVersion": "2016-06-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/connections', parameters('servicebus_1_Connection_Name'))]"
-      ]
-    },
-    {
-      "type": "MICROSOFT.WEB/CONNECTIONS",
-      "apiVersion": "2018-07-01-preview",
-      "name": "[parameters('servicebus_1_Connection_Name')]",
-      "location": "southindia",
-      "properties": {
-        "api": {
-          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', 'southindia', '/managedApis/', 'servicebus')]"
-        },
-        "displayName": "[parameters('servicebus_1_Connection_DisplayName')]",
-        "parameterValues": {
-          "connectionString": "[parameters('servicebus_1_connectionString')]"
         }
       }
     }
-  ],
-  "outputs": {}
+  ]
 }
